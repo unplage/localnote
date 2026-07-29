@@ -6,7 +6,7 @@
 const BASE_PATH = self.location.pathname.replace(/[^/]+$/, '');
 // 构建带项目标识的缓存名称，避免多项目冲突
 // 例如 '/pwa1/' -> 'pwa-cache-pwa1-v1'
-const CACHE_NAME = `pwa-cache${BASE_PATH.replace(/\//g, '-')}v1`;
+const CACHE_NAME = `pwa-cache${BASE_PATH.replace(/\//g, '-')}v2`;
 
 // 预缓存资源列表（全部使用相对于当前 sw.js 的路径）
 const PRECACHE_URLS = [
@@ -96,8 +96,8 @@ self.addEventListener('fetch', (event) => {
           // 连缓存都没有，返回自定义离线页（可预置 offline.html）
           // 如果希望更美观，可以预缓存一个 offline.html 并在这里返回它
           return new Response(
-            '<h1>📴 离线状态</h1><p>请检查网络连接后刷新页面。</p>',
-            { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/html' } }
+            '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>仿素记日记 - 离线</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#F8F9FA;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.card{text-align:center;padding:40px 20px}.icon{font-size:64px;margin-bottom:16px}.title{font-size:24px;font-weight:600;margin-bottom:8px}.desc{font-size:16px;color:#777;margin-bottom:24px}.btn{display:inline-block;padding:12px 32px;background:#5D5CDE;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;text-decoration:none}.btn:hover{background:#4a4abf}</style></head><body><div class="card"><div class="icon">📴</div><div class="title">网络已断开</div><div class="desc">仿素记日记无法加载最新页面<br>请检查网络连接后刷新</div><button class="btn" onclick="location.reload()">重新加载</button></div></body></html>',
+            { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/html;charset=UTF-8' } }
           );
         })
     );

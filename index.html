@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>素记日记</title>
+    <title>仿素记日记</title>
     <link rel="manifest" href="./manifest.json">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -229,7 +229,7 @@
         class DBManager {
             constructor() {
                 this.dbName = 'SimpleNotesDB';
-                this.dbVersion = 1;
+                this.dbVersion = 2;
                 this.db = null;
             }
             open() {
@@ -244,6 +244,12 @@
                         }
                         if (!db.objectStoreNames.contains('categories')) db.createObjectStore('categories', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
+                        if (db.objectStoreNames.contains('categories')) {
+                            const catStore = e.target.transaction.objectStore('categories');
+                            if (catStore.indexNames.contains('name')) {
+                                catStore.deleteIndex('name');
+                            }
+                        }
                     };
                     req.onsuccess = e => { this.db = e.target.result; resolve(); };
                     req.onerror = e => reject(e.target.error);
@@ -253,6 +259,7 @@
 
             getSetting(key) {
                 return new Promise(res => {
+                    if (!this.db) return res(null);
                     const r = this._tx('settings').get(key);
                     r.onsuccess = () => res(r.result?.value);
                     r.onerror = () => res(null);
@@ -260,6 +267,7 @@
             }
             setSetting(key, value) {
                 return new Promise(res => {
+                    if (!this.db) return res();
                     this._tx('settings', 'readwrite').put({ key, value });
                     res();
                 });
@@ -267,6 +275,7 @@
 
             saveNote(note) {
                 return new Promise((resolve, reject) => {
+                    if (!this.db) return reject(new Error('数据库未就绪'));
                     const req = this._tx('notes', 'readwrite').put(note);
                     req.onsuccess = () => resolve(note);
                     req.onerror = () => reject(req.error);
@@ -274,6 +283,7 @@
             }
             getNote(id) {
                 return new Promise((resolve, reject) => {
+                    if (!this.db) return reject(new Error('数据库未就绪'));
                     const req = this._tx('notes').get(id);
                     req.onsuccess = () => resolve(req.result);
                     req.onerror = () => reject(req.error);
@@ -281,6 +291,7 @@
             }
             getAllNotes() {
                 return new Promise((resolve, reject) => {
+                    if (!this.db) return reject(new Error('数据库未就绪'));
                     const req = this._tx('notes').getAll();
                     req.onsuccess = () => {
                         const notes = req.result.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
@@ -291,21 +302,26 @@
             }
             deleteNote(id) {
                 return new Promise(res => {
+                    if (!this.db) return res();
                     this._tx('notes', 'readwrite').delete(id);
                     res();
                 });
             }
             clearAll() {
-                return new Promise(res => {
-                    this._tx('notes', 'readwrite').clear();
-                    this._tx('categories', 'readwrite').clear();
-                    this._tx('settings', 'readwrite').clear();
-                    res();
+                return new Promise((res, rej) => {
+                    if (!this.db) return res();
+                    const tx = this.db.transaction(['notes', 'categories', 'settings'], 'readwrite');
+                    tx.objectStore('notes').clear();
+                    tx.objectStore('categories').clear();
+                    tx.objectStore('settings').clear();
+                    tx.oncomplete = () => res();
+                    tx.onerror = () => rej(tx.error);
                 });
             }
 
             getAllCategories() {
                 return new Promise(async (res) => {
+                    if (!this.db) return res([]);
                     const r = this._tx('categories').getAll();
                     r.onsuccess = async () => {
                         let cats = r.result || [];
@@ -324,6 +340,7 @@
             }
             saveCategory(cat) {
                 return new Promise((resolve, reject) => {
+                    if (!this.db) return reject(new Error('数据库未就绪'));
                     const req = this._tx('categories', 'readwrite').put(cat);
                     req.onsuccess = () => resolve(cat);
                     req.onerror = () => reject(req.error);
@@ -331,6 +348,7 @@
             }
             deleteCategory(id) {
                 return new Promise(res => {
+                    if (!this.db) return res();
                     this._tx('categories', 'readwrite').delete(id);
                     res();
                 });
@@ -466,7 +484,7 @@
                 await this.renderNotes();
                 this.loadSettingsToUI();
                 this.initTheme();
-                console.log('✅ 素记日记（纯文本版）初始化完成');
+                console.log('✅ 仿素记日记（纯文本版）初始化完成');
             }
 
             // ---------- 分类管理 ----------
@@ -603,26 +621,27 @@
             // ---------- 笔记列表 ----------
             async renderNotes() {
                 let notes = await this.db.getAllNotes();
+                const categories = await this.db.getAllCategories();
+                const categoryMap = {};
+                categories.forEach(c => { categoryMap[c.id] = c.name; });
                 if (this.currentFilter !== 'all') notes = notes.filter(n => n.category === this.currentFilter);
                 const search = this.els.searchInput.value.trim().toLowerCase();
                 if (search) {
                     notes = notes.filter(n => {
-                        const text = (n.title || '').toLowerCase() + ' ' + (normalizeContent(n.content) || '').toLowerCase();
+                        const text = (n.title || '').toLowerCase() + ' ' + (normalizeContent(n.content) || '').toLowerCase() + ' ' + ((categoryMap[n.category] || '')).toLowerCase();
                         return text.includes(search);
                     });
                 }
                 this.els.clearSearch.style.display = this.els.searchInput.value.trim() ? 'block' : 'none';
 
+                const prevScrollTop = this.els.notesList.scrollTop;
                 this.els.notesList.innerHTML = '';
                 if (notes.length === 0) {
                     this.els.notesList.innerHTML = `<div class="empty-state"><i class="fas fa-book-open"></i><p>暂无笔记</p></div>`;
                     return;
                 }
 
-                const categories = await this.db.getAllCategories();
-                const categoryMap = {};
-                categories.forEach(c => { categoryMap[c.id] = c.name; });
-
+                const fragment = document.createDocumentFragment();
                 notes.forEach(n => {
                     const div = document.createElement('div');
                     div.className = 'note-item';
@@ -637,8 +656,10 @@
                         </div>
                     `;
                     div.addEventListener('click', () => this.openEditor(n.id));
-                    this.els.notesList.appendChild(div);
+                    fragment.appendChild(div);
                 });
+                this.els.notesList.appendChild(fragment);
+                this.els.notesList.scrollTop = prevScrollTop;
             }
 
             // ---------- 编辑器（纯文本） ----------
@@ -691,7 +712,14 @@
             }
 
             closeEditor(shouldSave = true) {
-                if (shouldSave) this.saveNote(true);
+                if (shouldSave) {
+                    const title = this.els.noteTitleInput.value.trim();
+                    const content = this.els.plainEditor.value.trim();
+                    if (!this.editingId && !title && !content) {
+                        shouldSave = false;
+                    }
+                    if (shouldSave) this.saveNote(true);
+                }
                 this.els.editorContainer.classList.remove('active');
                 this.editingId = null;
                 this.els.timestampToolbar.style.display = 'none';
@@ -712,7 +740,7 @@
                 if (!force && content === this.lastSavedContent) return;
 
                 const noteData = {
-                    id: this.editingId || Date.now().toString(),
+                    id: this.editingId || Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
                     title: title,
                     content: content,
                     category: category || 'daily',  // 若 category 为空则兜底
@@ -819,18 +847,18 @@
                 const dateStr = new Date().toISOString().slice(0, 10);
 
                 if (format === 'json') {
-                    const data = { app: '素记日记', version: '4.0', exportDate: new Date().toISOString(), noteCount: notes.length, categories, notes };
+                    const data = { app: '仿素记日记', version: '4.0', exportDate: new Date().toISOString(), noteCount: notes.length, categories, notes };
                     content = JSON.stringify(data, null, 2);
                     mimeType = 'application/json';
-                    this.downloadContent(content, `素记日记_${dateStr}.json`, mimeType);
+                    this.downloadContent(content, `仿素记日记_${dateStr}.json`, mimeType);
                 } else {
-                    let md = `# 素记日记 - 笔记导出\n\n- **导出时间**: ${this.formatTimestamp(new Date(), 'YYYY年MM月DD日 HH:mm:ss')}\n- **笔记总数**: ${notes.length}\n\n---\n\n`;
+                    let md = `# 仿素记日记 - 笔记导出\n\n- **导出时间**: ${this.formatTimestamp(new Date(), 'YYYY年MM月DD日 HH:mm:ss')}\n- **笔记总数**: ${notes.length}\n\n---\n\n`;
                     notes.forEach((n, i) => {
                         const cat = categories.find(c => c.id === n.category);
                         const contentText = normalizeContent(n.content);
                         md += `## 笔记 ${i+1}: ${n.title}\n\n- **分类**: ${cat ? cat.name : n.category}\n- **更新**: ${this.formatTimestamp(new Date(n.updatedAt), 'YYYY年MM月DD日 HH:mm:ss')}\n\n---\n\n${contentText}\n\n---\n\n`;
                     });
-                    this.downloadContent(md, `素记日记_${dateStr}.md`, 'text/markdown');
+                    this.downloadContent(md, `仿素记日记_${dateStr}.md`, 'text/markdown');
                 }
             }
 
@@ -869,11 +897,18 @@
                         // ★ 修复：导入分类时生成新 ID，避免冲突
                         const categoryIdMap = {};
                         if (categories.length > 0) {
+                            const existingCats = await this.db.getAllCategories();
+                            const nameToId = {};
+                            existingCats.forEach(c => { nameToId[c.name] = c.id; });
                             for (const c of categories) {
-                                const newId = 'cat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-                                categoryIdMap[c.id] = newId;
-                                const newCat = { ...c, id: newId };
-                                await this.db.saveCategory(newCat);
+                                if (nameToId[c.name]) {
+                                    categoryIdMap[c.id] = nameToId[c.name];
+                                } else {
+                                    const newId = 'cat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+                                    categoryIdMap[c.id] = newId;
+                                    await this.db.saveCategory({ ...c, id: newId });
+                                    nameToId[c.name] = newId;
+                                }
                             }
                             await this.renderCategories();
                         }
@@ -907,20 +942,28 @@
                     const content = ev.target.result;
                     const lines = content.split('\n');
                     let currentNote = null, count = 0;
+                    let pendingCategoryName = null;
                     for (const line of lines) {
                         if (line.startsWith('## 笔记')) {
                             if (currentNote) {
-                                await this.saveCurrentNote(currentNote);
+                                await this.saveCurrentNote(currentNote, pendingCategoryName);
                                 count++;
                             }
                             const match = line.match(/## 笔记 \d+: (.+)/);
                             currentNote = { title: match ? match[1] : '未命名笔记', content: '', category: 'daily' };
-                        } else if (currentNote && line.trim() && !line.startsWith('- **')) {
+                            pendingCategoryName = null;
+                        } else if (currentNote && line.trim()) {
+                            const catMatch = line.match(/^- \*\*分类\*\*:\s*(.+)/);
+                            if (catMatch) {
+                                pendingCategoryName = catMatch[1].trim();
+                                continue;
+                            }
+                            if (line.startsWith('- **') || line.startsWith('---')) continue;
                             currentNote.content += line + '\n';
                         }
                     }
                     if (currentNote) {
-                        await this.saveCurrentNote(currentNote);
+                        await this.saveCurrentNote(currentNote, pendingCategoryName);
                         count++;
                     }
                     alert(`成功导入 ${count} 条笔记`);
@@ -929,15 +972,28 @@
                 reader.readAsText(file);
             }
 
-            async saveCurrentNote(note) {
-                // ★ 修复：确保分类存在，若不存在则创建
+            async saveCurrentNote(note, categoryName) {
                 const cats = await this.db.getAllCategories();
                 let targetCategory = note.category || 'daily';
-                const catExists = cats.some(c => c.id === targetCategory);
-                if (!catExists) {
-                    const newCat = { id: targetCategory, name: '日常', color: '#5D5CDE', order: cats.length };
-                    await this.db.saveCategory(newCat);
-                    await this.renderCategories();
+                if (categoryName) {
+                    const match = cats.find(c => c.name === categoryName);
+                    if (match) {
+                        targetCategory = match.id;
+                    } else {
+                        const newId = 'cat_' + Date.now();
+                        await this.db.saveCategory({
+                            id: newId, name: categoryName, color: '#5D5CDE', order: cats.length
+                        });
+                        await this.renderCategories();
+                        targetCategory = newId;
+                    }
+                } else {
+                    const catExists = cats.some(c => c.id === targetCategory);
+                    if (!catExists) {
+                        const newCat = { id: targetCategory, name: '日常', color: '#5D5CDE', order: cats.length };
+                        await this.db.saveCategory(newCat);
+                        await this.renderCategories();
+                    }
                 }
 
                 const newNote = {
@@ -980,6 +1036,7 @@
                     const color = this.els.newCategoryColor.value;
                     if (!name) return;
                     const cats = await this.db.getAllCategories();
+                    if (cats.some(c => c.name === name)) { alert('分类名称已存在'); return; }
                     const newOrder = cats.length > 0 ? Math.max(...cats.map(c => c.order || 0)) + 1 : 0;
                     await this.db.saveCategory({ id: 'cat_' + Date.now(), name, color, order: newOrder });
                     this.els.newCategoryName.value = '';
@@ -1019,6 +1076,7 @@
                 this.els.closeClearDataModal.addEventListener('click', () => this.hideModal(this.els.clearDataModal));
                 this.els.cancelClearData.addEventListener('click', () => this.hideModal(this.els.clearDataModal));
                 this.els.confirmClearData.addEventListener('click', async () => {
+                    this.closeEditor(false);
                     await this.db.clearAll();
                     this.hideModal(this.els.clearDataModal);
                     this.renderNotes();
@@ -1121,6 +1179,8 @@
                 let startX = 0, currentX = 0, isDragging = false;
                 const ec = this.els.editorContainer;
                 ec.addEventListener('touchstart', e => {
+                    const target = e.target;
+                    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable) return;
                     if (e.touches[0].clientX < 30) { isDragging = true; startX = e.touches[0].clientX; ec.classList.add('swiping'); }
                 }, { passive: true });
                 ec.addEventListener('touchmove', e => {
@@ -1133,7 +1193,7 @@
                     if (!isDragging) return;
                     const diff = currentX - startX;
                     ec.classList.remove('swiping');
-                    if (diff > 100) { this.closeEditor(true); } else { ec.style.transform = ''; }
+                    if (diff > 150) { this.closeEditor(true); } else { ec.style.transform = ''; }
                     isDragging = false;
                 });
             }
