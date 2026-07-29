@@ -1,0 +1,6 @@
+
+# Android build artifacts
+android/.gradle/
+android/build/dex/
+android/build/out/
+*.idsig
