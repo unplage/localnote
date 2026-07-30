@@ -521,31 +521,6 @@
                 };
             }
 
-            // ---------- 视口同步（移动端键盘适配） ----------
-            _bindViewport() {
-                this._unbindViewport();
-                const sync = () => {
-                    const vp = window.visualViewport;
-                    if (!vp) return;
-                    this.els.editorContainer.style.height = `${vp.height}px`;
-                    this.els.editorContainer.style.top = `${vp.offsetTop}px`;
-                };
-                this._vpSync = sync;
-                window.visualViewport.addEventListener('resize', sync);
-                window.visualViewport.addEventListener('scroll', sync);
-                sync();
-            }
-
-            _unbindViewport() {
-                if (this._vpSync) {
-                    window.visualViewport.removeEventListener('resize', this._vpSync);
-                    window.visualViewport.removeEventListener('scroll', this._vpSync);
-                    this._vpSync = null;
-                }
-                this.els.editorContainer.style.height = '';
-                this.els.editorContainer.style.top = '';
-            }
-
             _updateCharCount() {
                 const text = this.els.plainEditor.value;
                 const chars = text.length;
@@ -762,7 +737,6 @@
                 this.editingId = id;
                 this.els.editorContainer.classList.add('active');
                 document.body.classList.add('editor-open');
-                this._bindViewport();
                 const scrollY = window.scrollY;
                 document.body.style.position = 'fixed';
                 document.body.style.top = `-${scrollY}px`;
@@ -808,7 +782,6 @@
                 }
                 this.els.editorContainer.classList.remove('active');
                 document.body.classList.remove('editor-open');
-                this._unbindViewport();
                 clearTimeout(this.autoSaveTimer);
                 this.autoSaveTimer = null;
                 this.editingId = null;
