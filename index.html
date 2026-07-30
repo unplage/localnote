@@ -152,37 +152,38 @@
                 </div>
             </div>
         </main>
-        <!-- ===== 编辑器浮层 ===== -->
-        <div class="editor-container" id="editorContainer">
-            <div class="editor-header">
-                <button class="icon-btn" id="closeEditor"><i class="fas fa-arrow-left"></i></button>
-                <div class="auto-save-status" id="autoSaveStatus">已保存</div>
-                <div class="editor-actions">
-                    <button class="icon-btn" id="timestampBtn" title="插入时间戳"><i class="fas fa-clock"></i></button>
-                    <button class="icon-btn" id="saveNote" title="保存"><i class="fas fa-check"></i></button>
-                    <button class="icon-btn" id="deleteNote" title="删除"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-            <div class="editor-content">
-                <div class="title-row">
-                    <input type="text" class="note-title-input" id="noteTitleInput" placeholder="标题">
-                    <select class="category-select" id="categorySelect"></select>
-                </div>
-                <textarea id="plain-editor" placeholder="开始记录..."></textarea>
-                <div class="timestamp-toolbar" id="timestampToolbar" style="display:none;">
-                    <button class="timestamp-btn" data-format="datetime"><i class="fas fa-calendar-alt"></i> 日期时间</button>
-                    <button class="timestamp-btn" data-format="date"><i class="fas fa-calendar-day"></i> 日期</button>
-                    <button class="timestamp-btn" data-format="time"><i class="fas fa-clock"></i> 时间</button>
-                    <button class="timestamp-btn" data-format="week"><i class="fas fa-calendar-week"></i> 星期</button>
-                    <button class="timestamp-btn" data-format="custom"><i class="fas fa-pen"></i> 自定义格式</button>
-                </div>
-            </div>
-            <div class="editor-footer" id="editorFooter">
-                <span id="charCount">0 字</span>
-                <span id="lastEditTime"></span>
+        <button class="add-button" id="addButton"><i class="fas fa-plus"></i></button>
+    </div>
+
+    <!-- ===== 编辑器浮层（在 appContent 外部，避免被 visibility:hidden 隐藏） ===== -->
+    <div class="editor-container" id="editorContainer">
+        <div class="editor-header">
+            <button class="icon-btn" id="closeEditor"><i class="fas fa-arrow-left"></i></button>
+            <div class="auto-save-status" id="autoSaveStatus">已保存</div>
+            <div class="editor-actions">
+                <button class="icon-btn" id="timestampBtn" title="插入时间戳"><i class="fas fa-clock"></i></button>
+                <button class="icon-btn" id="saveNote" title="保存"><i class="fas fa-check"></i></button>
+                <button class="icon-btn" id="deleteNote" title="删除"><i class="fas fa-trash"></i></button>
             </div>
         </div>
-        <button class="add-button" id="addButton"><i class="fas fa-plus"></i></button>
+        <div class="editor-content">
+            <div class="title-row">
+                <input type="text" class="note-title-input" id="noteTitleInput" placeholder="标题">
+                <select class="category-select" id="categorySelect"></select>
+            </div>
+            <textarea id="plain-editor" placeholder="开始记录..."></textarea>
+            <div class="timestamp-toolbar" id="timestampToolbar" style="display:none;">
+                <button class="timestamp-btn" data-format="datetime"><i class="fas fa-calendar-alt"></i> 日期时间</button>
+                <button class="timestamp-btn" data-format="date"><i class="fas fa-calendar-day"></i> 日期</button>
+                <button class="timestamp-btn" data-format="time"><i class="fas fa-clock"></i> 时间</button>
+                <button class="timestamp-btn" data-format="week"><i class="fas fa-calendar-week"></i> 星期</button>
+                <button class="timestamp-btn" data-format="custom"><i class="fas fa-pen"></i> 自定义格式</button>
+            </div>
+        </div>
+        <div class="editor-footer" id="editorFooter">
+            <span id="charCount">0 字</span>
+            <span id="lastEditTime"></span>
+        </div>
     </div>
 
     <!-- ===== 模态框：分类管理 ===== -->
