@@ -102,6 +102,8 @@
         .confirm-btns .c-danger{background:var(--danger-color);color:white}
         /* ===== 字数统计 ===== */
         .editor-footer{padding:8px 16px;border-top:1px solid var(--border-color);flex-shrink:0;display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary)}
+        /* ===== 编辑器打开时隐藏底层内容 ===== */
+        body.editor-open #appContent{visibility:hidden}
     </style>
 </head>
 <body>
@@ -758,6 +760,7 @@
             async openEditor(id = null) {
                 this.editingId = id;
                 this.els.editorContainer.classList.add('active');
+                document.body.classList.add('editor-open');
                 this._bindViewport();
                 const scrollY = window.scrollY;
                 document.body.style.position = 'fixed';
@@ -803,6 +806,7 @@
                     if (shouldSave) this.saveNote(true);
                 }
                 this.els.editorContainer.classList.remove('active');
+                document.body.classList.remove('editor-open');
                 this._unbindViewport();
                 clearTimeout(this.autoSaveTimer);
                 this.autoSaveTimer = null;
