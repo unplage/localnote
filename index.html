@@ -474,6 +474,31 @@
                 };
             }
 
+            // ---------- 视口同步（移动端键盘适配） ----------
+            _bindViewport() {
+                this._unbindViewport();
+                const sync = () => {
+                    const vp = window.visualViewport;
+                    if (!vp) return;
+                    this.els.editorContainer.style.height = `${vp.height}px`;
+                    this.els.editorContainer.style.top = `${vp.offsetTop}px`;
+                };
+                this._vpSync = sync;
+                window.visualViewport.addEventListener('resize', sync);
+                window.visualViewport.addEventListener('scroll', sync);
+                sync();
+            }
+
+            _unbindViewport() {
+                if (this._vpSync) {
+                    window.visualViewport.removeEventListener('resize', this._vpSync);
+                    window.visualViewport.removeEventListener('scroll', this._vpSync);
+                    this._vpSync = null;
+                }
+                this.els.editorContainer.style.height = '';
+                this.els.editorContainer.style.top = '';
+            }
+
             // ---------- 初始化 ----------
             async init() {
                 await this.db.open();
@@ -680,9 +705,8 @@
 
             async openEditor(id = null) {
                 this.editingId = id;
-                const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                this.els.editorContainer.style.height = `${vh}px`;
                 this.els.editorContainer.classList.add('active');
+                this._bindViewport();
                 const scrollY = window.scrollY;
                 document.body.style.position = 'fixed';
                 document.body.style.top = `-${scrollY}px`;
@@ -721,6 +745,7 @@
                     if (shouldSave) this.saveNote(true);
                 }
                 this.els.editorContainer.classList.remove('active');
+                this._unbindViewport();
                 this.editingId = null;
                 this.els.timestampToolbar.style.display = 'none';
                 const scrollY = parseInt(document.body.style.top || '0') * -1;
