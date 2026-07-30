@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>仿素记日记</title>
     <link rel="manifest" href="./manifest.json">
     <link rel="stylesheet" href="./fontawesome.min.css">
@@ -531,6 +531,9 @@
             // ---------- 初始化 ----------
             async init() {
                 await this.db.open();
+                if ('virtualKeyboard' in navigator) {
+                    navigator.virtualKeyboard.overlaysContent = false;
+                }
                 this.bindGlobalEvents();
                 this.bindEditorEvents();
                 this.setupViewport();
