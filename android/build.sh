@@ -28,7 +28,7 @@ $BUILD_TOOLS/aapt package -f \
     -A $PROJECT/app/src/main/assets \
     -I $PLATFORM/android.jar \
     --version-code 2 \
-    --version-name "1.2.0" \
+    --version-name "1.2.1" \
     -F $OUTDIR/${APPNAME}-unsigned.apk
 
 echo "==> 4. 写入 classes.dex"
@@ -46,10 +46,10 @@ $BUILD_TOOLS/apksigner sign \
     --ks-pass pass:android \
     --ks-key-alias androiddebugkey \
     --key-pass pass:android \
-    --out $OUTDIR/${APPNAME}-v1.2.0-debug.apk \
+    --out $OUTDIR/${APPNAME}-v1.2.1-debug.apk \
     $OUTDIR/${APPNAME}-unsigned-aligned.apk
 
 rm -f $OUTDIR/${APPNAME}-unsigned.apk $OUTDIR/${APPNAME}-unsigned-aligned.apk
 echo ""
-echo "✅ APK 生成完毕: $OUTDIR/${APPNAME}-v1.2.0-debug.apk"
-ls -lh $OUTDIR/${APPNAME}-v1.2.0-debug.apk
+echo "✅ APK 生成完毕: $OUTDIR/${APPNAME}-v1.2.1-debug.apk"
+ls -lh $OUTDIR/${APPNAME}-v1.2.1-debug.apk

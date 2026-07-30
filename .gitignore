@@ -4,3 +4,4 @@ android/.gradle/
 android/build/dex/
 android/build/out/
 *.idsig
+*.apk
