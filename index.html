@@ -116,8 +116,7 @@
                     <div class="header-actions">
                         <button class="icon-btn" id="searchBtn" title="搜索"><i class="fas fa-search"></i></button>
                         <button class="icon-btn" id="categoryManageBtn" title="管理分类"><i class="fas fa-tags"></i></button>
-                        <button class="icon-btn" id="exportBtn" title="导出/导入"><i class="fas fa-file-export"></i></button>
-                        <button class="icon-btn" id="themeBtn" title="切换主题"><i class="fas fa-moon"></i></button>
+                        <button class="icon-btn" id="settingsBtn" title="设置"><i class="fas fa-cog"></i></button>
                     </div>
                 </div>
             </div>
@@ -631,8 +630,7 @@
                     timestampToolbar: document.getElementById('timestampToolbar'),
                     searchBtn: document.getElementById('searchBtn'),
                     categoryManageBtn: document.getElementById('categoryManageBtn'),
-                    exportBtn: document.getElementById('exportBtn'),
-                    themeBtn: document.getElementById('themeBtn'),
+                    settingsBtn: document.getElementById('settingsBtn'),
                     exportJsonBtn: document.getElementById('exportJsonBtn'),
                     exportMarkdownBtn: document.getElementById('exportMarkdownBtn'),
                     importJsonBtn: document.getElementById('importJsonBtn'),
@@ -1256,7 +1254,7 @@
                     this.renderCategories();
                 });
 
-                this.els.exportBtn.addEventListener('click', () => {
+                this.els.settingsBtn.addEventListener('click', () => {
                     const display = this.els.settingsSection.style.display;
                     this.els.settingsSection.style.display = display === 'none' ? 'block' : 'none';
                 });
@@ -1326,7 +1324,6 @@
                     this.db.setSetting('showAutoSaveStatus', this.settings.showAutoSaveStatus);
                 });
 
-                this.els.themeBtn.addEventListener('click', () => this.toggleTheme());
 
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape' && this.els.editorContainer.classList.contains('active')) {
@@ -1420,7 +1417,6 @@
                 }
                 
                 document.documentElement.setAttribute('data-theme', effectiveTheme);
-                this.els.themeBtn.innerHTML = effectiveTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
                 
                 // 保存设置
                 this.db.setSetting('theme', theme);
