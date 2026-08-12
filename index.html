@@ -130,17 +130,22 @@
                 </div>
                 <div class="categories" id="categories"></div>
                 <div class="notes-list" id="notesList"></div>
-                <!-- 导出面板 -->
-                <div class="export-section" id="exportSection" style="display:none;">
-                    <h3 style="margin-bottom:12px;"><i class="fas fa-file-export"></i> 数据管理</h3>
-                    <button class="lock-btn" id="exportJsonBtn" style="background:var(--text-secondary);">📥 导出 JSON</button>
-                    <button class="lock-btn" id="exportMarkdownBtn" style="background:var(--secondary-color);">📄 导出 Markdown</button>
-                    <button class="lock-btn" id="importJsonBtn" style="background:var(--primary-color);">📤 导入 JSON</button>
-                    <button class="lock-btn" id="clearDataBtn" style="background:var(--danger-color);">🗑️ 清除所有数据</button>
-                </div>
+
                 <!-- 设置面板 -->
                 <div class="settings-section" id="settingsSection" style="display:none;">
                     <h3><i class="fas fa-cog"></i> 设置</h3>
+                    
+                    <!-- 主题颜色 -->
+                    <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                        <label>主题颜色</label>
+                        <div>
+                            <label style="margin-right:8px;"><input type="radio" name="themeOption" value="light"> 浅色</label>
+                            <label style="margin-right:8px;"><input type="radio" name="themeOption" value="dark"> 深色</label>
+                            <label><input type="radio" name="themeOption" value="auto"> 自动</label>
+                        </div>
+                    </div>
+                    
+                    <!-- 自动保存 -->
                     <div style="display:flex;justify-content:space-between;padding:8px 0;">
                         <label>自动保存间隔（秒）</label>
                         <div><input type="number" id="autoSaveIntervalInput" value="3" min="1" max="300" style="width:60px;padding:4px;border:1px solid var(--border-color);border-radius:4px;background:var(--card-color);color:var(--text-primary);"> 秒</div>
@@ -148,6 +153,32 @@
                     <div style="display:flex;justify-content:space-between;padding:8px 0;">
                         <label>显示自动保存状态</label>
                         <div><input type="checkbox" id="autoSaveShowStatus" checked></div>
+                    </div>
+                    
+                    <!-- 数据管理 -->
+                    <h3 style="margin-top:16px;margin-bottom:8px;"><i class="fas fa-file-export"></i> 数据管理</h3>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <button class="lock-btn" id="exportJsonBtn" style="background:var(--text-secondary);">📥 导出 JSON</button>
+                        <button class="lock-btn" id="exportMarkdownBtn" style="background:var(--secondary-color);">📄 导出 Markdown</button>
+                        <button class="lock-btn" id="importJsonBtn" style="background:var(--primary-color);">📤 导入 JSON</button>
+                        <button class="lock-btn" id="clearDataBtn" style="background:var(--danger-color);">🗑️ 清除所有数据</button>
+                    </div>
+                    
+                    <!-- 密码保护 -->
+                    <h3 style="margin-top:16px;margin-bottom:8px;"><i class="fas fa-lock"></i> 密码保护</h3>
+                    <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                        <label>设置密码</label>
+                        <div style="display:flex;gap:8px;">
+                            <input type="password" id="appPassword" placeholder="输入密码" style="width:120px;padding:4px;border:1px solid var(--border-color);border-radius:4px;background:var(--card-color);color:var(--text-primary);">
+                            <button class="lock-btn" id="setPasswordBtn" style="background:var(--primary-color);">设置</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                        <label>清除密码</label>
+                        <div style="display:flex;gap:8px;">
+                            <button class="lock-btn" id="clearPasswordBtn" style="background:var(--danger-color);">清除</button>
+                            <span id="passwordStatus" style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -424,6 +455,120 @@
             return '';
         }
 
+        // 密码保护相关函数
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        // 设置密码
+        async function setPassword(password) {
+            const hash = await sha256(password);
+            localStorage.setItem('app_password_hash', hash);
+            // 更新密码状态显示
+            const statusEl = document.getElementById('passwordStatus');
+            if (statusEl) statusEl.textContent = '已设置';
+        }
+        
+        // 清除密码
+        function clearPassword() {
+            localStorage.removeItem('app_password_hash');
+            const statusEl = document.getElementById('passwordStatus');
+            if (statusEl) statusEl.textContent = '未设置';
+        }
+        
+        // 验证密码
+        async function verifyPassword(input) {
+            const storedHash = localStorage.getItem('app_password_hash');
+            if (!storedHash) return true; // 未设置密码，直接通过
+            const inputHash = await sha256(input);
+            return inputHash === storedHash;
+        }
+        
+        // 检查是否需要认证
+        function needsAuth() {
+            return !!localStorage.getItem('app_password_hash');
+        }
+        
+        // 切换密码可见性
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+        
+        // 处理密码验证
+        async function handleAuth() {
+            const password = document.getElementById('authPassword').value;
+            const errorEl = document.getElementById('authError');
+            
+            if (!password) {
+                errorEl.textContent = '请输入密码';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            const ok = await verifyPassword(password);
+            if (ok) {
+                const overlay = document.getElementById('authOverlay');
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => {
+                    overlay.remove();
+                    initApp(); // 继续初始化应用
+                }, 300);
+            } else {
+                errorEl.textContent = '密码错误，请重试';
+                errorEl.style.display = 'block';
+                document.getElementById('authPassword').value = '';
+                document.getElementById('authPassword').focus();
+            }
+        }
+        
+        // 处理设置密码
+        async function handleSetPassword() {
+            const password = document.getElementById('appPassword').value.trim();
+            if (!password) {
+                window.app.showToast('请输入密码', 'error');
+                return;
+            }
+            if (password.length < 4) {
+                window.app.showToast('密码至少4位', 'error');
+                return;
+            }
+            await setPassword(password);
+            window.app.showToast('密码已设置', 'success');
+            document.getElementById('appPassword').value = '';
+        }
+        
+        // 处理清除密码
+        async function handleClearPassword() {
+            if (!needsAuth()) {
+                window.app.showToast('未设置密码', 'info');
+                return;
+            }
+            // 需要验证当前密码
+            const password = prompt('请输入当前密码以确认清除：');
+            if (password === null) return;
+            const ok = await verifyPassword(password);
+            if (ok) {
+                clearPassword();
+                window.app.showToast('密码已清除', 'success');
+            } else {
+                window.app.showToast('密码错误', 'error');
+            }
+        }
+        
+        // 应用初始化（密码验证通过后调用）
+        function initApp() {
+            window.app = new App();
+        }
+
         function formatDate(d) {
             const date = new Date(d);
             const now = new Date();
@@ -473,7 +618,6 @@
                     searchContainer: document.getElementById('searchContainer'),
                     searchInput: document.getElementById('searchInput'),
                     clearSearch: document.getElementById('clearSearch'),
-                    exportSection: document.getElementById('exportSection'),
                     settingsSection: document.getElementById('settingsSection'),
                     editorContainer: document.getElementById('editorContainer'),
                     noteTitleInput: document.getElementById('noteTitleInput'),
@@ -541,6 +685,7 @@
                 await this.renderNotes();
                 this.loadSettingsToUI();
                 await this.initTheme();
+                this.updatePasswordStatus();
                 console.log('✅ 仿素记日记（纯文本版）初始化完成');
             }
 
@@ -1112,11 +1257,21 @@
                 });
 
                 this.els.exportBtn.addEventListener('click', () => {
-                    const display = this.els.exportSection.style.display;
-                    this.els.exportSection.style.display = display === 'none' ? 'block' : 'none';
+                    const display = this.els.settingsSection.style.display;
                     this.els.settingsSection.style.display = display === 'none' ? 'block' : 'none';
                 });
-
+                
+                // 密码保护按钮事件
+                document.getElementById('setPasswordBtn').addEventListener('click', () => handleSetPassword());
+                document.getElementById('clearPasswordBtn').addEventListener('click', () => handleClearPassword());
+                
+                // 主题颜色单选按钮事件
+                document.querySelectorAll('input[name="themeOption"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.applyTheme(e.target.value);
+                    });
+                });
+                
                 this.els.exportJsonBtn.addEventListener('click', () => this.exportNotes('json'));
                 this.els.exportMarkdownBtn.addEventListener('click', () => this.exportNotes('markdown'));
 
@@ -1245,25 +1400,50 @@
             }
 
             toggleTheme() {
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                const newTheme = isDark ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem('simpleNotesTheme', newTheme);
-                this.db.setSetting('theme', newTheme);
-                this.els.themeBtn.innerHTML = isDark ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+                const selectedRadio = document.querySelector('input[name="themeOption"]:checked');
+                const current = selectedRadio ? selectedRadio.value : 'auto';
+                let next;
+                if (current === 'light') next = 'dark';
+                else if (current === 'dark') next = 'auto';
+                else next = 'light';
+                
+                this.applyTheme(next);
+                const themeRadio = document.querySelector(`input[name="themeOption"][value="${next}"]`);
+                if (themeRadio) themeRadio.checked = true;
+            }
+            
+            applyTheme(theme) {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                let effectiveTheme = theme;
+                if (theme === 'auto') {
+                    effectiveTheme = prefersDark ? 'dark' : 'light';
+                }
+                
+                document.documentElement.setAttribute('data-theme', effectiveTheme);
+                this.els.themeBtn.innerHTML = effectiveTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                
+                // 保存设置
+                this.db.setSetting('theme', theme);
+                localStorage.setItem('simpleNotesTheme', theme);
+            }
+            
+            updatePasswordStatus() {
+                const statusEl = document.getElementById('passwordStatus');
+                if (statusEl) {
+                    statusEl.textContent = needsAuth() ? '已设置' : '未设置';
+                }
             }
 
             async initTheme() {
                 let saved = await this.db.getSetting('theme');
                 if (!saved) saved = localStorage.getItem('simpleNotesTheme');
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (saved === 'dark' || (!saved && prefersDark)) {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    this.els.themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
-                } else {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                    this.els.themeBtn.innerHTML = '<i class="fas fa-moon"></i>';
-                }
+                if (!saved) saved = 'auto'; // 默认自动
+                
+                // 更新主题颜色单选按钮
+                const themeRadio = document.querySelector(`input[name="themeOption"][value="${saved}"]`);
+                if (themeRadio) themeRadio.checked = true;
+                
+                this.applyTheme(saved);
             }
 
             setupViewport() {
@@ -1304,6 +1484,32 @@
         //  4. 启动应用
         // ============================================================
         document.addEventListener('DOMContentLoaded', () => {
+            // 检查密码保护
+            if (needsAuth()) {
+                const authOverlay = document.createElement('div');
+                authOverlay.id = 'authOverlay';
+                authOverlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-color); z-index: 10000; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 24px;';
+                authOverlay.innerHTML = `
+                    <div style="text-align: center;">
+                        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: var(--primary-color);">素记日记</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem;">请输入密码以继续</p>
+                    </div>
+                    <div style="position: relative; width: 280px;">
+                        <input type="password" id="authPassword" placeholder="输入密码" 
+                               style="width: 100%; padding: 14px 48px 14px 16px; font-size: 1rem; background: var(--card-color); border: 2px solid var(--border-color); border-radius: 12px; color: var(--text-primary);"
+                               onkeydown="if(event.key==='Enter') handleAuth()">
+                        <button onclick="togglePasswordVisibility('authPassword')" 
+                                style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem;">👁</button>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleAuth()" style="width: 280px; padding: 14px; border: none; border-radius: 12px; background: var(--primary-color); color: white; font-size: 1rem; cursor: pointer;">验证密码</button>
+                    <div id="authError" style="color: var(--danger-color); font-size: 0.875rem; display: none;"></div>
+                `;
+                document.body.appendChild(authOverlay);
+                document.getElementById('authPassword').focus();
+                return; // 阻止后续初始化
+            }
+            
+            // 无需密码保护，直接初始化
             window.app = new App();
         });
 
