@@ -6,7 +6,7 @@
 const BASE_PATH = self.location.pathname.replace(/[^/]+$/, '');
 // 构建带项目标识的缓存名称，避免多项目冲突
 // 例如 '/pwa1/' -> 'pwa-cache-pwa1-v1'
-const CACHE_NAME = `pwa-cache${BASE_PATH.replace(/\//g, '-')}v9`;
+const CACHE_NAME = `pwa-cache${BASE_PATH.replace(/\//g, '-')}v10`;
 
 // 预缓存资源列表（全部使用相对于当前 sw.js 的路径）
 const PRECACHE_URLS = [
@@ -14,6 +14,9 @@ const PRECACHE_URLS = [
   `${BASE_PATH}index.html`,
   `${BASE_PATH}manifest.json`,
   `${BASE_PATH}fontawesome.min.css`,
+  `${BASE_PATH}webfonts/fa-solid-900.woff2`,
+  `${BASE_PATH}webfonts/fa-regular-400.woff2`,
+  `${BASE_PATH}webfonts/fa-brands-400.woff2`,
 ];
 
 // 静态资源扩展名（用于判断是否缓存优先）
